@@ -37,11 +37,18 @@ type LogConfig struct {
 	Format string
 }
 
+// WorkerConfig holds worker configuration
+type WorkerConfig struct {
+	GracePeriodInterval  time.Duration
+	GracePeriodBatchSize int
+}
+
 // Config holds all application configuration
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Log      LogConfig
+	Worker   WorkerConfig
 }
 
 // Load reads configuration from environment variables
@@ -71,6 +78,10 @@ func Load() (*Config, error) {
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "json"),
+		},
+		Worker: WorkerConfig{
+			GracePeriodInterval:  getEnvAsDuration("GRACE_PERIOD_INTERVAL", 30*time.Second),
+			GracePeriodBatchSize: getEnvAsInt("GRACE_PERIOD_BATCH_SIZE", 100),
 		},
 	}
 

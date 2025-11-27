@@ -15,6 +15,7 @@ import (
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/inbox-allocation-service/internal/server"
 	"github.com/inbox-allocation-service/internal/service"
+	"github.com/inbox-allocation-service/internal/worker"
 	"go.uber.org/zap"
 )
 
@@ -87,6 +88,21 @@ func main() {
 		CORSConfig: middleware.DefaultCORSConfig(),
 	})
 
+	// Initialize workers
+	workerManager := worker.NewManager()
+
+	gracePeriodService := service.NewGracePeriodService(repos, pool, log)
+	gracePeriodWorker := worker.NewGracePeriodWorker(
+		gracePeriodService,
+		worker.GracePeriodWorkerConfig{
+			Interval:  cfg.Worker.GracePeriodInterval,
+			BatchSize: cfg.Worker.GracePeriodBatchSize,
+		},
+		log,
+	)
+	workerManager.Register(gracePeriodWorker)
+	log.Info("Workers initialized")
+
 	// Parse server port
 	port, err := strconv.Atoi(cfg.Server.Port)
 	if err != nil {
@@ -104,6 +120,10 @@ func main() {
 	}
 	srv := server.New(router, log, serverConfig)
 
+	// Start workers
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	workerManager.StartAll(workerCtx)
+
 	// Graceful shutdown setup
 	go func() {
 		if err := srv.Start(); err != nil {
@@ -117,6 +137,11 @@ func main() {
 	<-quit
 
 	log.Info("Received shutdown signal")
+
+	// Stop workers first (they may be in middle of processing)
+	workerCancel()
+	workerManager.StopAll()
+	log.Info("Workers stopped")
 
 	// Shutdown server
 	if err := srv.Shutdown(context.Background()); err != nil {
