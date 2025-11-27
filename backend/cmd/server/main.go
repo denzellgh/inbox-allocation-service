@@ -14,6 +14,7 @@ import (
 	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/inbox-allocation-service/internal/server"
+	"github.com/inbox-allocation-service/internal/service"
 	"go.uber.org/zap"
 )
 
@@ -59,11 +60,24 @@ func main() {
 	repos := repository.NewRepositoryContainer(pool)
 	log.Info("Repositories initialized")
 
+	// Initialize transaction manager
+	txMgr := database.NewTxManager(pool)
+
+	// Initialize services
+	services := &api.ServiceContainer{
+		Operator:     service.NewOperatorService(repos, txMgr, log),
+		Inbox:        service.NewInboxService(repos, log),
+		Subscription: service.NewSubscriptionService(repos, log),
+		Tenant:       service.NewTenantService(repos, log),
+	}
+	log.Info("Services initialized")
+
 	// Create router
 	router := api.NewRouter(api.RouterConfig{
 		Logger:     log,
 		Pool:       pool,
 		Repos:      repos,
+		Services:   services,
 		Version:    Version,
 		BuildTime:  BuildTime,
 		CORSConfig: middleware.DefaultCORSConfig(),
