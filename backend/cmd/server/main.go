@@ -45,18 +45,12 @@ func main() {
 		zap.String("build_time", BuildTime),
 	)
 
-	// Connect to database
-	pool, err := database.NewPool(&cfg.Database)
+	// Connect to database with retry
+	pool, err := database.NewPoolWithRetry(&cfg.Database, log)
 	if err != nil {
 		log.Fatal("Failed to connect to database", zap.Error(err))
 	}
 	defer pool.Close()
-
-	// Verify database connection
-	if err := database.HealthCheck(context.Background(), pool); err != nil {
-		log.Fatal("Database health check failed", zap.Error(err))
-	}
-	log.Info("Database connection established")
 
 	// Start pool monitor
 	poolMonitorCtx, poolMonitorCancel := context.WithCancel(context.Background())
@@ -153,33 +147,43 @@ func main() {
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	workerManager.StartAll(workerCtx)
 
-	// Graceful shutdown setup
+	// Register shutdown hooks
+	srv.OnPreShutdown(func(ctx context.Context) error {
+		log.Info("stopping workers")
+		workerCancel()
+		workerManager.StopAll()
+		return nil
+	})
+
+	srv.OnPostShutdown(func(ctx context.Context) error {
+		log.Info("stopping pool monitor")
+		poolMonitorCancel()
+		return nil
+	})
+
+	srv.OnPostShutdown(func(ctx context.Context) error {
+		log.Info("closing database connections")
+		pool.Close()
+		return nil
+	})
+
+	// Start server (blocks until signal)
 	go func() {
 		if err := srv.Start(); err != nil {
 			log.Error("Server error", zap.Error(err))
 		}
 	}()
 
-	// Wait for interrupt signal
+	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Info("Received shutdown signal")
-
-	// Stop workers first (they may be in middle of processing)
-	workerCancel()
-	workerManager.StopAll()
-	log.Info("Workers stopped")
-
-	// Stop pool monitor
-	poolMonitorCancel()
-	log.Info("Pool monitor stopped")
-
-	// Shutdown server
+	// Graceful shutdown (runs all hooks)
 	if err := srv.Shutdown(context.Background()); err != nil {
-		log.Error("Server shutdown error", zap.Error(err))
+		log.Error("Shutdown error", zap.Error(err))
+		os.Exit(1)
 	}
 
-	log.Info("Service stopped")
+	log.Info("Service stopped gracefully")
 }
