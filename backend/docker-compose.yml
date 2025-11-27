@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: allocation_postgres
+    environment:
+      POSTGRES_USER: allocation_user
+      POSTGRES_PASSWORD: allocation_pass
+      POSTGRES_DB: allocation_db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "54321:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U allocation_user -d allocation_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
