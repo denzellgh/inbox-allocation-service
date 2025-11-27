@@ -71,6 +71,7 @@ func main() {
 		Tenant:       service.NewTenantService(repos, log),
 		Conversation: service.NewConversationService(repos, log),
 		Allocation:   service.NewAllocationService(repos, pool, log),
+		Lifecycle:    service.NewLifecycleService(repos, pool, log),
 	}
 	log.Info("Services initialized")
 

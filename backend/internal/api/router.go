@@ -29,6 +29,7 @@ type ServiceContainer struct {
 	Tenant       *service.TenantService
 	Conversation *service.ConversationService
 	Allocation   *service.AllocationService
+	Lifecycle    *service.LifecycleService
 }
 
 // NewRouter creates and configures the Chi router
@@ -132,6 +133,13 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 		allocationHandler := handler.NewAllocationHandler(cfg.Services.Allocation)
 		r.Post("/allocate", allocationHandler.Allocate)
 		r.Post("/claim", allocationHandler.Claim)
+
+		// 7.1-7.4 Lifecycle Operations
+		lifecycleHandler := handler.NewLifecycleHandler(cfg.Services.Lifecycle)
+		r.Post("/resolve", lifecycleHandler.Resolve)
+		r.Post("/deallocate", lifecycleHandler.Deallocate)
+		r.Post("/reassign", lifecycleHandler.Reassign)
+		r.Post("/move_inbox", lifecycleHandler.MoveInbox)
 	})
 
 	return r
