@@ -28,6 +28,7 @@ type ServiceContainer struct {
 	Subscription *service.SubscriptionService
 	Tenant       *service.TenantService
 	Conversation *service.ConversationService
+	Allocation   *service.AllocationService
 }
 
 // NewRouter creates and configures the Chi router
@@ -126,6 +127,11 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 
 		// Search endpoint
 		r.Get("/search", conversationHandler.Search)
+
+		// 6.1 & 6.2 Allocation & Claim
+		allocationHandler := handler.NewAllocationHandler(cfg.Services.Allocation)
+		r.Post("/allocate", allocationHandler.Allocate)
+		r.Post("/claim", allocationHandler.Claim)
 	})
 
 	return r

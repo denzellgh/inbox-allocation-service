@@ -70,6 +70,7 @@ func main() {
 		Subscription: service.NewSubscriptionService(repos, log),
 		Tenant:       service.NewTenantService(repos, log),
 		Conversation: service.NewConversationService(repos, log),
+		Allocation:   service.NewAllocationService(repos, pool, log),
 	}
 	log.Info("Services initialized")
 
