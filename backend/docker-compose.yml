@@ -1,23 +1,149 @@
+# ============================================
+# Inbox Allocation Service - Development
+# ============================================
+version: '3.8'
+
 services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
   postgres:
     image: postgres:16-alpine
     container_name: allocation_postgres
     environment:
-      POSTGRES_USER: allocation_user
-      POSTGRES_PASSWORD: allocation_pass
-      POSTGRES_DB: allocation_db
+      POSTGRES_USER: ${DB_USER:-allocation_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-allocation_pass}
+      POSTGRES_DB: ${DB_NAME:-allocation_db}
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "54321:5432"
+      - "${DB_PORT_EXTERNAL:-54321}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U allocation_user -d allocation_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-allocation_user} -d ${DB_NAME:-allocation_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    networks:
+      - allocation_network
+    restart: unless-stopped
+
+  # ============================================
+  # Application
+  # ============================================
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: production
+  #     args:
+  #       VERSION: ${VERSION:-dev}
+  #       BUILD_TIME: ${BUILD_TIME:-unknown}
+  #       GIT_COMMIT: ${GIT_COMMIT:-unknown}
+  #   container_name: allocation_app
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     migrate:
+  #       condition: service_completed_successfully
+  #   environment:
+  #     # Server
+  #     - SERVER_HOST=0.0.0.0
+  #     - SERVER_PORT=8080
+  #     - SERVER_READ_TIMEOUT=15s
+  #     - SERVER_WRITE_TIMEOUT=15s
+  #     - SERVER_SHUTDOWN_TIMEOUT=30s
+  #     # Database
+  #     - DB_HOST=postgres
+  #     - DB_PORT=5432
+  #     - DB_USER=${DB_USER:-allocation_user}
+  #     - DB_PASSWORD=${DB_PASSWORD:-allocation_pass}
+  #     - DB_NAME=${DB_NAME:-allocation_db}
+  #     - DB_SSL_MODE=disable
+  #     - DB_MAX_CONNS=25
+  #     - DB_MIN_CONNS=5
+  #     # Logging
+  #     - LOG_LEVEL=${LOG_LEVEL:-debug}
+  #     - LOG_FORMAT=${LOG_FORMAT:-console}
+  #     # Workers
+  #     - GRACE_PERIOD_DURATION=5m
+  #     - GRACE_PERIOD_CHECK_INTERVAL=30s
+  #     - GRACE_PERIOD_BATCH_SIZE=50
+  #     # Idempotency
+  #     - IDEMPOTENCY_TTL=24h
+  #     - IDEMPOTENCY_CLEANUP_INTERVAL=1h
+  #   ports:
+  #     - "${APP_PORT:-8080}:8080"
+  #   networks:
+  #     - allocation_network
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+  # ============================================
+  # Database Migrations (one-shot)
+  # ============================================
+  migrate:
+    image: migrate/migrate:latest
+    container_name: allocation_migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://${DB_USER:-allocation_user}:${DB_PASSWORD:-allocation_pass}@postgres:5432/${DB_NAME:-allocation_db}?sslmode=disable",
+      "up"
+    ]
+    networks:
+      - allocation_network
+
+  # ============================================
+  # Development with Hot Reload (optional)
+  # ============================================
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: allocation_app_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-allocation_user}
+      - DB_PASSWORD=${DB_PASSWORD:-allocation_pass}
+      - DB_NAME=${DB_NAME:-allocation_db}
+      - DB_SSL_MODE=disable
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=console
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - .:/app
+      - go_modules:/go/pkg/mod
+    networks:
+      - allocation_network
+    profiles:
+      - dev
 
 volumes:
   postgres_data:
     driver: local
+  go_modules:
+    driver: local
+
+networks:
+  allocation_network:
+    driver: bridge
+    name: allocation_network
