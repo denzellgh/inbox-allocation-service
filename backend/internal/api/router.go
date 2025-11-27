@@ -30,6 +30,7 @@ type ServiceContainer struct {
 	Conversation *service.ConversationService
 	Allocation   *service.AllocationService
 	Lifecycle    *service.LifecycleService
+	Label        *service.LabelService
 }
 
 // NewRouter creates and configures the Chi router
@@ -140,6 +141,18 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 		r.Post("/deallocate", lifecycleHandler.Deallocate)
 		r.Post("/reassign", lifecycleHandler.Reassign)
 		r.Post("/move_inbox", lifecycleHandler.MoveInbox)
+
+		// 8.1-8.2 Label Management
+		labelHandler := handler.NewLabelHandler(cfg.Services.Label)
+		r.Route("/labels", func(r chi.Router) {
+			r.Post("/", labelHandler.Create)
+			r.Get("/", labelHandler.List)
+			r.Put("/{id}", labelHandler.Update)
+			r.Delete("/{id}", labelHandler.Delete)
+
+			r.Post("/attach", labelHandler.Attach)
+			r.Post("/detach", labelHandler.Detach)
+		})
 	})
 
 	return r

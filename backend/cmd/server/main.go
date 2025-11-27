@@ -72,6 +72,7 @@ func main() {
 		Conversation: service.NewConversationService(repos, log),
 		Allocation:   service.NewAllocationService(repos, pool, log),
 		Lifecycle:    service.NewLifecycleService(repos, pool, log),
+		Label:        service.NewLabelService(repos, pool, log),
 	}
 	log.Info("Services initialized")
 
