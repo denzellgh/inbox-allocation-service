@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/inbox-allocation-service/internal/api/handler"
+	"github.com/inbox-allocation-service/internal/api/handlers"
 	"github.com/inbox-allocation-service/internal/api/middleware"
 	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
@@ -50,6 +51,11 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 	r.Get("/health", healthHandler.Health)
 	r.Get("/ready", healthHandler.Ready)
 	r.Get("/version", healthHandler.Version)
+
+	// Documentation routes (no tenant required)
+	docsHandler := handlers.NewDocsHandler()
+	r.Get("/docs", docsHandler.ServeSwaggerUI)
+	r.Get("/api/openapi.yaml", docsHandler.ServeOpenAPISpec)
 
 	// API v1 routes (tenant required)
 	r.Route("/api/v1", func(r chi.Router) {
