@@ -27,6 +27,7 @@ type ServiceContainer struct {
 	Inbox        *service.InboxService
 	Subscription *service.SubscriptionService
 	Tenant       *service.TenantService
+	Conversation *service.ConversationService
 }
 
 // NewRouter creates and configures the Chi router
@@ -115,6 +116,16 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 			r.Get("/", tenantHandler.Get)
 			r.Put("/weights", tenantHandler.UpdateWeights)
 		})
+
+		// 5.1 & 5.2 Conversations (any operator with access)
+		conversationHandler := handler.NewConversationHandler(cfg.Services.Conversation)
+		r.Route("/conversations", func(r chi.Router) {
+			r.Get("/", conversationHandler.List)
+			r.Get("/{id}", conversationHandler.GetByID)
+		})
+
+		// Search endpoint
+		r.Get("/search", conversationHandler.Search)
 	})
 
 	return r

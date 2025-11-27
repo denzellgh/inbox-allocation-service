@@ -69,6 +69,7 @@ func main() {
 		Inbox:        service.NewInboxService(repos, log),
 		Subscription: service.NewSubscriptionService(repos, log),
 		Tenant:       service.NewTenantService(repos, log),
+		Conversation: service.NewConversationService(repos, log),
 	}
 	log.Info("Services initialized")
 
