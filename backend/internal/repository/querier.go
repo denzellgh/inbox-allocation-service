@@ -6,10 +6,81 @@ package repository
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CheckConversationLabelExists(ctx context.Context, arg CheckConversationLabelExistsParams) (bool, error)
+	CheckSubscriptionExists(ctx context.Context, arg CheckSubscriptionExistsParams) (bool, error)
+	CreateConversationLabel(ctx context.Context, arg CreateConversationLabelParams) error
+	CreateConversationRef(ctx context.Context, arg CreateConversationRefParams) error
+	CreateGracePeriodAssignment(ctx context.Context, arg CreateGracePeriodAssignmentParams) error
+	CreateInbox(ctx context.Context, arg CreateInboxParams) error
+	CreateLabel(ctx context.Context, arg CreateLabelParams) error
+	CreateOperator(ctx context.Context, arg CreateOperatorParams) error
+	CreateOperatorStatus(ctx context.Context, arg CreateOperatorStatusParams) error
+	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
+	CreateTenant(ctx context.Context, arg CreateTenantParams) error
+	DeleteAllConversationLabels(ctx context.Context, conversationID pgtype.UUID) error
+	DeleteConversationLabel(ctx context.Context, arg DeleteConversationLabelParams) error
+	DeleteConversationRef(ctx context.Context, id pgtype.UUID) error
+	DeleteGracePeriodAssignment(ctx context.Context, id pgtype.UUID) error
+	DeleteGracePeriodByConversationID(ctx context.Context, conversationID pgtype.UUID) error
+	DeleteGracePeriodsByOperatorID(ctx context.Context, operatorID pgtype.UUID) error
+	DeleteInbox(ctx context.Context, id pgtype.UUID) error
+	DeleteLabel(ctx context.Context, id pgtype.UUID) error
+	DeleteOperator(ctx context.Context, id pgtype.UUID) error
+	DeleteSubscription(ctx context.Context, id pgtype.UUID) error
+	DeleteSubscriptionByOperatorAndInbox(ctx context.Context, arg DeleteSubscriptionByOperatorAndInboxParams) error
+	DeleteTenant(ctx context.Context, id pgtype.UUID) error
+	// CRITICAL: Get and lock expired for worker
+	GetAndLockExpiredGracePeriods(ctx context.Context, limit int32) ([]GracePeriodAssignment, error)
+	GetAvailableOperators(ctx context.Context, tenantID pgtype.UUID) ([]OperatorStatus, error)
+	GetConversationLabelsByConversationID(ctx context.Context, conversationID pgtype.UUID) ([]ConversationLabel, error)
+	GetConversationLabelsByLabelID(ctx context.Context, labelID pgtype.UUID) ([]ConversationLabel, error)
+	GetConversationRefByExternalID(ctx context.Context, arg GetConversationRefByExternalIDParams) (ConversationRef, error)
+	GetConversationRefByID(ctx context.Context, id pgtype.UUID) (ConversationRef, error)
+	GetConversationsByInbox(ctx context.Context, arg GetConversationsByInboxParams) ([]ConversationRef, error)
+	GetConversationsByOperatorAndState(ctx context.Context, arg GetConversationsByOperatorAndStateParams) ([]ConversationRef, error)
+	GetConversationsByOperatorID(ctx context.Context, arg GetConversationsByOperatorIDParams) ([]ConversationRef, error)
+	GetConversationsByTenantAndState(ctx context.Context, arg GetConversationsByTenantAndStateParams) ([]ConversationRef, error)
+	GetExpiredGracePeriods(ctx context.Context, limit int32) ([]GracePeriodAssignment, error)
+	GetGracePeriodByConversationID(ctx context.Context, conversationID pgtype.UUID) (GracePeriodAssignment, error)
+	GetGracePeriodsByOperatorID(ctx context.Context, operatorID pgtype.UUID) ([]GracePeriodAssignment, error)
+	GetInboxByID(ctx context.Context, id pgtype.UUID) (Inbox, error)
+	GetInboxByPhoneNumber(ctx context.Context, arg GetInboxByPhoneNumberParams) (Inbox, error)
+	GetInboxesByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Inbox, error)
+	GetLabelByID(ctx context.Context, id pgtype.UUID) (Label, error)
+	GetLabelByName(ctx context.Context, arg GetLabelByNameParams) (Label, error)
+	GetLabelsByInboxID(ctx context.Context, arg GetLabelsByInboxIDParams) ([]Label, error)
+	// CRITICAL: Allocation query with FOR UPDATE SKIP LOCKED
+	GetNextConversationsForAllocation(ctx context.Context, arg GetNextConversationsForAllocationParams) ([]ConversationRef, error)
+	GetOperatorByID(ctx context.Context, id pgtype.UUID) (Operator, error)
+	GetOperatorStatusByOperatorID(ctx context.Context, operatorID pgtype.UUID) (OperatorStatus, error)
+	GetOperatorsByTenantAndRole(ctx context.Context, arg GetOperatorsByTenantAndRoleParams) ([]Operator, error)
+	GetOperatorsByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Operator, error)
+	GetQueuedConversationsByTenant(ctx context.Context, arg GetQueuedConversationsByTenantParams) ([]ConversationRef, error)
+	GetSubscribedInboxIDs(ctx context.Context, operatorID pgtype.UUID) ([]pgtype.UUID, error)
+	GetSubscriptionByID(ctx context.Context, id pgtype.UUID) (OperatorInboxSubscription, error)
+	GetSubscriptionByOperatorAndInbox(ctx context.Context, arg GetSubscriptionByOperatorAndInboxParams) (OperatorInboxSubscription, error)
+	GetSubscriptionsByInboxID(ctx context.Context, inboxID pgtype.UUID) ([]OperatorInboxSubscription, error)
+	GetSubscriptionsByOperatorID(ctx context.Context, operatorID pgtype.UUID) ([]OperatorInboxSubscription, error)
+	GetTenantByID(ctx context.Context, id pgtype.UUID) (Tenant, error)
+	GetTenantByName(ctx context.Context, name string) (Tenant, error)
 	HealthCheck(ctx context.Context) (int32, error)
+	ListTenants(ctx context.Context) ([]Tenant, error)
+	// CRITICAL: Lock specific conversation for claim
+	LockConversationForClaim(ctx context.Context, id pgtype.UUID) (ConversationRef, error)
+	SearchConversationsByPhone(ctx context.Context, arg SearchConversationsByPhoneParams) ([]ConversationRef, error)
+	UpdateConversationRef(ctx context.Context, arg UpdateConversationRefParams) error
+	// Update state only (for allocation/deallocate/resolve)
+	UpdateConversationState(ctx context.Context, arg UpdateConversationStateParams) error
+	UpdateInbox(ctx context.Context, arg UpdateInboxParams) error
+	UpdateLabel(ctx context.Context, arg UpdateLabelParams) error
+	UpdateOperator(ctx context.Context, arg UpdateOperatorParams) error
+	UpdateOperatorStatus(ctx context.Context, arg UpdateOperatorStatusParams) error
+	UpdateTenant(ctx context.Context, arg UpdateTenantParams) error
 }
 
 var _ Querier = (*Queries)(nil)
