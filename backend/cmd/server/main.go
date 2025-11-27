@@ -77,20 +77,33 @@ func main() {
 	}
 	log.Info("Services initialized")
 
-	// Create router
+	// Initialize idempotency service
+	idempotencyService := service.NewIdempotencyService(
+		repos,
+		service.IdempotencyConfig{
+			TTL:             cfg.Idempotency.TTL,
+			CleanupInterval: cfg.Idempotency.CleanupInterval,
+			CleanupBatch:    100,
+		},
+		log,
+	)
+
+	// Create router with idempotency
 	router := api.NewRouter(api.RouterConfig{
-		Logger:     log,
-		Pool:       pool,
-		Repos:      repos,
-		Services:   services,
-		Version:    Version,
-		BuildTime:  BuildTime,
-		CORSConfig: middleware.DefaultCORSConfig(),
+		Logger:             log,
+		Pool:               pool,
+		Repos:              repos,
+		Services:           services,
+		IdempotencyService: idempotencyService,
+		Version:            Version,
+		BuildTime:          BuildTime,
+		CORSConfig:         middleware.DefaultCORSConfig(),
 	})
 
 	// Initialize workers
 	workerManager := worker.NewManager()
 
+	// Grace period worker
 	gracePeriodService := service.NewGracePeriodService(repos, pool, log)
 	gracePeriodWorker := worker.NewGracePeriodWorker(
 		gracePeriodService,
@@ -101,6 +114,17 @@ func main() {
 		log,
 	)
 	workerManager.Register(gracePeriodWorker)
+
+	// Idempotency cleanup worker
+	idempotencyWorker := worker.NewIdempotencyWorker(
+		idempotencyService,
+		worker.IdempotencyWorkerConfig{
+			Interval: cfg.Idempotency.CleanupInterval,
+		},
+		log,
+	)
+	workerManager.Register(idempotencyWorker)
+
 	log.Info("Workers initialized")
 
 	// Parse server port

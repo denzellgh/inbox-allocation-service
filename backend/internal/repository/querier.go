@@ -13,9 +13,11 @@ import (
 type Querier interface {
 	CheckConversationLabelExists(ctx context.Context, arg CheckConversationLabelExistsParams) (bool, error)
 	CheckSubscriptionExists(ctx context.Context, arg CheckSubscriptionExistsParams) (bool, error)
+	CountIdempotencyKeys(ctx context.Context, tenantID pgtype.UUID) (int64, error)
 	CreateConversationLabel(ctx context.Context, arg CreateConversationLabelParams) error
 	CreateConversationRef(ctx context.Context, arg CreateConversationRefParams) error
 	CreateGracePeriodAssignment(ctx context.Context, arg CreateGracePeriodAssignmentParams) error
+	CreateIdempotencyKey(ctx context.Context, arg CreateIdempotencyKeyParams) error
 	CreateInbox(ctx context.Context, arg CreateInboxParams) error
 	CreateLabel(ctx context.Context, arg CreateLabelParams) error
 	CreateOperator(ctx context.Context, arg CreateOperatorParams) error
@@ -25,9 +27,11 @@ type Querier interface {
 	DeleteAllConversationLabels(ctx context.Context, conversationID pgtype.UUID) error
 	DeleteConversationLabel(ctx context.Context, arg DeleteConversationLabelParams) error
 	DeleteConversationRef(ctx context.Context, id pgtype.UUID) error
+	DeleteExpiredIdempotencyKeys(ctx context.Context) (int64, error)
 	DeleteGracePeriodAssignment(ctx context.Context, id pgtype.UUID) error
 	DeleteGracePeriodByConversationID(ctx context.Context, conversationID pgtype.UUID) error
 	DeleteGracePeriodsByOperatorID(ctx context.Context, operatorID pgtype.UUID) error
+	DeleteIdempotencyKey(ctx context.Context, id pgtype.UUID) error
 	DeleteInbox(ctx context.Context, id pgtype.UUID) error
 	DeleteLabel(ctx context.Context, id pgtype.UUID) error
 	DeleteOperator(ctx context.Context, id pgtype.UUID) error
@@ -46,8 +50,10 @@ type Querier interface {
 	GetConversationsByOperatorID(ctx context.Context, arg GetConversationsByOperatorIDParams) ([]ConversationRef, error)
 	GetConversationsByTenantAndState(ctx context.Context, arg GetConversationsByTenantAndStateParams) ([]ConversationRef, error)
 	GetExpiredGracePeriods(ctx context.Context, limit int32) ([]GracePeriodAssignment, error)
+	GetExpiredIdempotencyKeysForCleanup(ctx context.Context, limit int32) ([]IdempotencyKey, error)
 	GetGracePeriodByConversationID(ctx context.Context, conversationID pgtype.UUID) (GracePeriodAssignment, error)
 	GetGracePeriodsByOperatorID(ctx context.Context, operatorID pgtype.UUID) ([]GracePeriodAssignment, error)
+	GetIdempotencyKey(ctx context.Context, arg GetIdempotencyKeyParams) (IdempotencyKey, error)
 	GetInboxByID(ctx context.Context, id pgtype.UUID) (Inbox, error)
 	GetInboxByPhoneNumber(ctx context.Context, arg GetInboxByPhoneNumberParams) (Inbox, error)
 	GetInboxesByTenantID(ctx context.Context, tenantID pgtype.UUID) ([]Inbox, error)

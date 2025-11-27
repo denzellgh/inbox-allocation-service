@@ -43,12 +43,19 @@ type WorkerConfig struct {
 	GracePeriodBatchSize int
 }
 
+// IdempotencyConfig holds idempotency configuration
+type IdempotencyConfig struct {
+	TTL             time.Duration
+	CleanupInterval time.Duration
+}
+
 // Config holds all application configuration
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Log      LogConfig
-	Worker   WorkerConfig
+	Server      ServerConfig
+	Database    DatabaseConfig
+	Log         LogConfig
+	Worker      WorkerConfig
+	Idempotency IdempotencyConfig
 }
 
 // Load reads configuration from environment variables
@@ -82,6 +89,10 @@ func Load() (*Config, error) {
 		Worker: WorkerConfig{
 			GracePeriodInterval:  getEnvAsDuration("GRACE_PERIOD_INTERVAL", 30*time.Second),
 			GracePeriodBatchSize: getEnvAsInt("GRACE_PERIOD_BATCH_SIZE", 100),
+		},
+		Idempotency: IdempotencyConfig{
+			TTL:             getEnvAsDuration("IDEMPOTENCY_TTL", 24*time.Hour),
+			CleanupInterval: getEnvAsDuration("IDEMPOTENCY_CLEANUP_INTERVAL", 1*time.Hour),
 		},
 	}
 

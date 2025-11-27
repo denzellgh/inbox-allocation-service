@@ -130,3 +130,23 @@ type GracePeriodAssignmentRepository interface {
 	// For worker: get and lock expired assignments
 	GetAndLockExpired(ctx context.Context, limit int) ([]*GracePeriodAssignment, error)
 }
+
+// ==================== IdempotencyRepository ====================
+
+// IdempotencyRepository handles idempotency key storage
+type IdempotencyRepository interface {
+	// Create stores a new idempotency key
+	Create(ctx context.Context, ik *IdempotencyKey) error
+
+	// GetByKey retrieves an idempotency key by tenant and key
+	GetByKey(ctx context.Context, tenantID uuid.UUID, key string) (*IdempotencyKey, error)
+
+	// Delete removes an idempotency key
+	Delete(ctx context.Context, id uuid.UUID) error
+
+	// DeleteExpired removes all expired idempotency keys
+	DeleteExpired(ctx context.Context) (int64, error)
+
+	// GetExpiredForCleanup gets expired keys with lock for distributed cleanup
+	GetExpiredForCleanup(ctx context.Context, limit int) ([]*IdempotencyKey, error)
+}

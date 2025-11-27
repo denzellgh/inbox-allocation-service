@@ -12,13 +12,14 @@ import (
 
 // RouterConfig holds dependencies for router creation
 type RouterConfig struct {
-	Logger     *zap.Logger
-	Pool       *pgxpool.Pool
-	Repos      *repository.RepositoryContainer
-	Services   *ServiceContainer
-	Version    string
-	BuildTime  string
-	CORSConfig middleware.CORSConfig
+	Logger             *zap.Logger
+	Pool               *pgxpool.Pool
+	Repos              *repository.RepositoryContainer
+	Services           *ServiceContainer
+	IdempotencyService *service.IdempotencyService
+	Version            string
+	BuildTime          string
+	CORSConfig         middleware.CORSConfig
 }
 
 // ServiceContainer holds all service instances
@@ -130,17 +131,30 @@ func NewRouter(cfg RouterConfig) *chi.Mux {
 		// Search endpoint
 		r.Get("/search", conversationHandler.Search)
 
-		// 6.1 & 6.2 Allocation & Claim
+		// 6.1 & 6.2 Allocation & Claim with Idempotency
 		allocationHandler := handler.NewAllocationHandler(cfg.Services.Allocation)
-		r.Post("/allocate", allocationHandler.Allocate)
-		r.Post("/claim", allocationHandler.Claim)
-
-		// 7.1-7.4 Lifecycle Operations
 		lifecycleHandler := handler.NewLifecycleHandler(cfg.Services.Lifecycle)
-		r.Post("/resolve", lifecycleHandler.Resolve)
-		r.Post("/deallocate", lifecycleHandler.Deallocate)
-		r.Post("/reassign", lifecycleHandler.Reassign)
-		r.Post("/move_inbox", lifecycleHandler.MoveInbox)
+
+		if cfg.IdempotencyService != nil {
+			// Apply idempotency middleware to critical mutation endpoints
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.Idempotency(cfg.IdempotencyService))
+				r.Post("/allocate", allocationHandler.Allocate)
+				r.Post("/claim", allocationHandler.Claim)
+				r.Post("/resolve", lifecycleHandler.Resolve)
+				r.Post("/deallocate", lifecycleHandler.Deallocate)
+				r.Post("/reassign", lifecycleHandler.Reassign)
+				r.Post("/move_inbox", lifecycleHandler.MoveInbox)
+			})
+		} else {
+			// Without idempotency (fallback)
+			r.Post("/allocate", allocationHandler.Allocate)
+			r.Post("/claim", allocationHandler.Claim)
+			r.Post("/resolve", lifecycleHandler.Resolve)
+			r.Post("/deallocate", lifecycleHandler.Deallocate)
+			r.Post("/reassign", lifecycleHandler.Reassign)
+			r.Post("/move_inbox", lifecycleHandler.MoveInbox)
+		}
 
 		// 8.1-8.2 Label Management
 		labelHandler := handler.NewLabelHandler(cfg.Services.Label)
