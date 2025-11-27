@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/service"
 	"go.uber.org/zap"
 )
@@ -27,7 +28,7 @@ func DefaultGracePeriodWorkerConfig() GracePeriodWorkerConfig {
 type GracePeriodWorker struct {
 	service *service.GracePeriodService
 	config  GracePeriodWorkerConfig
-	logger  *zap.Logger
+	logger  *logger.Logger
 
 	stopCh chan struct{}
 	wg     sync.WaitGroup
@@ -37,12 +38,12 @@ type GracePeriodWorker struct {
 func NewGracePeriodWorker(
 	svc *service.GracePeriodService,
 	config GracePeriodWorkerConfig,
-	logger *zap.Logger,
+	log *logger.Logger,
 ) *GracePeriodWorker {
 	return &GracePeriodWorker{
 		service: svc,
 		config:  config,
-		logger:  logger,
+		logger:  log,
 		stopCh:  make(chan struct{}),
 	}
 }

@@ -4,15 +4,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/inbox-allocation-service/internal/api/handler"
 	"github.com/inbox-allocation-service/internal/api/middleware"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/inbox-allocation-service/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.uber.org/zap"
 )
 
 // RouterConfig holds dependencies for router creation
 type RouterConfig struct {
-	Logger             *zap.Logger
+	Logger             *logger.Logger
 	Pool               *pgxpool.Pool
 	Repos              *repository.RepositoryContainer
 	Services           *ServiceContainer

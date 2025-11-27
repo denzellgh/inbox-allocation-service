@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -35,12 +36,12 @@ func DefaultConfig() Config {
 // Server wraps the HTTP server
 type Server struct {
 	httpServer *http.Server
-	logger     *zap.Logger
+	logger     *logger.Logger
 	config     Config
 }
 
 // New creates a new server instance
-func New(handler http.Handler, logger *zap.Logger, config Config) *Server {
+func New(handler http.Handler, log *logger.Logger, config Config) *Server {
 	return &Server{
 		httpServer: &http.Server{
 			Addr:         fmt.Sprintf("%s:%d", config.Host, config.Port),
@@ -49,7 +50,7 @@ func New(handler http.Handler, logger *zap.Logger, config Config) *Server {
 			WriteTimeout: config.WriteTimeout,
 			IdleTimeout:  config.IdleTimeout,
 		},
-		logger: logger,
+		logger: log,
 		config: config,
 	}
 }

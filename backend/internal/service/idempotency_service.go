@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"go.uber.org/zap"
 )
@@ -39,18 +40,18 @@ func DefaultIdempotencyConfig() IdempotencyConfig {
 type IdempotencyService struct {
 	repos  *repository.RepositoryContainer
 	config IdempotencyConfig
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
 func NewIdempotencyService(
 	repos *repository.RepositoryContainer,
 	config IdempotencyConfig,
-	logger *zap.Logger,
+	log *logger.Logger,
 ) *IdempotencyService {
 	return &IdempotencyService{
 		repos:  repos,
 		config: config,
-		logger: logger,
+		logger: log,
 	}
 }
 

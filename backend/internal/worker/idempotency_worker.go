@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/service"
 	"go.uber.org/zap"
 )
@@ -25,7 +26,7 @@ func DefaultIdempotencyWorkerConfig() IdempotencyWorkerConfig {
 type IdempotencyWorker struct {
 	service *service.IdempotencyService
 	config  IdempotencyWorkerConfig
-	logger  *zap.Logger
+	logger  *logger.Logger
 
 	stopCh chan struct{}
 	wg     sync.WaitGroup
@@ -35,12 +36,12 @@ type IdempotencyWorker struct {
 func NewIdempotencyWorker(
 	svc *service.IdempotencyService,
 	config IdempotencyWorkerConfig,
-	logger *zap.Logger,
+	log *logger.Logger,
 ) *IdempotencyWorker {
 	return &IdempotencyWorker{
 		service: svc,
 		config:  config,
-		logger:  logger,
+		logger:  log,
 		stopCh:  make(chan struct{}),
 	}
 }

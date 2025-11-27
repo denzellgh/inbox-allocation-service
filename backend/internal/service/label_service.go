@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -23,14 +24,14 @@ var (
 type LabelService struct {
 	repos  *repository.RepositoryContainer
 	pool   *pgxpool.Pool
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewLabelService(repos *repository.RepositoryContainer, pool *pgxpool.Pool, logger *zap.Logger) *LabelService {
+func NewLabelService(repos *repository.RepositoryContainer, pool *pgxpool.Pool, log *logger.Logger) *LabelService {
 	return &LabelService{
 		repos:  repos,
 		pool:   pool,
-		logger: logger,
+		logger: log,
 	}
 }
 

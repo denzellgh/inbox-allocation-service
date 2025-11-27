@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/inbox-allocation-service/internal/api"
 	"github.com/inbox-allocation-service/internal/api/middleware"
@@ -56,6 +57,10 @@ func main() {
 		log.Fatal("Database health check failed", zap.Error(err))
 	}
 	log.Info("Database connection established")
+
+	// Start pool monitor
+	poolMonitorCtx, poolMonitorCancel := context.WithCancel(context.Background())
+	go database.StartPoolMonitor(poolMonitorCtx, pool, log, 30*time.Second)
 
 	// Initialize repositories
 	repos := repository.NewRepositoryContainer(pool)
@@ -166,6 +171,10 @@ func main() {
 	workerCancel()
 	workerManager.StopAll()
 	log.Info("Workers stopped")
+
+	// Stop pool monitor
+	poolMonitorCancel()
+	log.Info("Pool monitor stopped")
 
 	// Shutdown server
 	if err := srv.Shutdown(context.Background()); err != nil {

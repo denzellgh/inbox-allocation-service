@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -23,18 +24,18 @@ type GracePeriodResult struct {
 type GracePeriodService struct {
 	repos  *repository.RepositoryContainer
 	pool   *pgxpool.Pool
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
 func NewGracePeriodService(
 	repos *repository.RepositoryContainer,
 	pool *pgxpool.Pool,
-	logger *zap.Logger,
+	log *logger.Logger,
 ) *GracePeriodService {
 	return &GracePeriodService{
 		repos:  repos,
 		pool:   pool,
-		logger: logger,
+		logger: log,
 	}
 }
 

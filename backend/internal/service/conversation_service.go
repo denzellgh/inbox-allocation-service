@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/api/dto"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -15,11 +16,11 @@ import (
 
 type ConversationService struct {
 	repos  *repository.RepositoryContainer
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewConversationService(repos *repository.RepositoryContainer, logger *zap.Logger) *ConversationService {
-	return &ConversationService{repos: repos, logger: logger}
+func NewConversationService(repos *repository.RepositoryContainer, log *logger.Logger) *ConversationService {
+	return &ConversationService{repos: repos, logger: log}
 }
 
 // ==================== List Conversations ====================

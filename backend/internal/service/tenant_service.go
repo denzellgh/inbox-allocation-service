@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
@@ -13,11 +14,11 @@ import (
 
 type TenantService struct {
 	repos  *repository.RepositoryContainer
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewTenantService(repos *repository.RepositoryContainer, logger *zap.Logger) *TenantService {
-	return &TenantService{repos: repos, logger: logger}
+func NewTenantService(repos *repository.RepositoryContainer, log *logger.Logger) *TenantService {
+	return &TenantService{repos: repos, logger: log}
 }
 
 func (s *TenantService) GetByID(ctx context.Context, id uuid.UUID) (*domain.Tenant, error) {

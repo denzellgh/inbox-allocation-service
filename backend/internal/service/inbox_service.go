@@ -6,17 +6,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 type InboxService struct {
 	repos  *repository.RepositoryContainer
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewInboxService(repos *repository.RepositoryContainer, logger *zap.Logger) *InboxService {
-	return &InboxService{repos: repos, logger: logger}
+func NewInboxService(repos *repository.RepositoryContainer, log *logger.Logger) *InboxService {
+	return &InboxService{repos: repos, logger: log}
 }
 
 func (s *InboxService) Create(ctx context.Context, tenantID uuid.UUID, phoneNumber, displayName string) (*domain.Inbox, error) {

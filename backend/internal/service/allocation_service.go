@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -26,14 +27,14 @@ const MaxAllocationCandidates = 100
 type AllocationService struct {
 	repos  *repository.RepositoryContainer
 	pool   *pgxpool.Pool
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewAllocationService(repos *repository.RepositoryContainer, pool *pgxpool.Pool, logger *zap.Logger) *AllocationService {
+func NewAllocationService(repos *repository.RepositoryContainer, pool *pgxpool.Pool, log *logger.Logger) *AllocationService {
 	return &AllocationService{
 		repos:  repos,
 		pool:   pool,
-		logger: logger,
+		logger: log,
 	}
 }
 
@@ -42,16 +43,29 @@ func NewAllocationService(repos *repository.RepositoryContainer, pool *pgxpool.P
 // Allocate automatically assigns the next highest-priority conversation to the operator
 // CRITICAL: Uses FOR UPDATE SKIP LOCKED to prevent race conditions
 func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID uuid.UUID) (*domain.ConversationRef, error) {
+	// Create method-scoped logger with context
+	log := logger.FromContext(ctx).
+		WithService("allocation").
+		WithMethod("Allocate").
+		WithFields(
+			zap.String("tenant_id", tenantID.String()),
+			zap.String("operator_id", operatorID.String()),
+		)
+
+	log.Debug("starting allocation")
 	start := time.Now()
 
 	// 1. Validate operator status
 	status, err := s.repos.OperatorStatus.GetByOperatorID(ctx, operatorID)
 	if err != nil {
+		log.Error("failed to get operator status", zap.Error(err))
 		return nil, err
 	}
+
+	log.Debug("operator status validated", zap.String("status", string(status.Status)))
+
 	if status.Status != domain.OperatorStatusAvailable {
-		s.logger.Warn("Allocation attempt by non-available operator",
-			zap.String("operator_id", operatorID.String()),
+		log.Info("operator not available for allocation",
 			zap.String("status", string(status.Status)))
 		return nil, ErrOperatorNotAvailable
 	}
@@ -59,13 +73,16 @@ func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID u
 	// 2. Get operator's subscribed inboxes
 	inboxIDs, err := s.repos.Subscriptions.GetSubscribedInboxIDs(ctx, operatorID)
 	if err != nil {
+		log.Error("failed to get subscriptions", zap.Error(err))
 		return nil, err
 	}
+
 	if len(inboxIDs) == 0 {
-		s.logger.Warn("Allocation attempt by operator with no subscriptions",
-			zap.String("operator_id", operatorID.String()))
+		log.Info("operator has no inbox subscriptions")
 		return nil, ErrNoSubscriptions
 	}
+
+	log.Debug("found subscriptions", zap.Int("inbox_count", len(inboxIDs)))
 
 	// 3. Begin transaction
 	tx, err := s.pool.Begin(ctx)
@@ -76,28 +93,27 @@ func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID u
 
 	// 4. Get next conversation with lock (FOR UPDATE SKIP LOCKED)
 	// This query is CRITICAL for preventing race conditions
+	log.Debug("fetching queued conversations with FOR UPDATE SKIP LOCKED")
 	conversations, err := s.repos.ConversationRefs.GetNextForAllocation(ctx, tenantID, inboxIDs, 1)
 	if err != nil {
-		s.logger.Error("Failed to fetch conversations for allocation",
-			zap.String("tenant_id", tenantID.String()),
-			zap.String("operator_id", operatorID.String()),
-			zap.Error(err))
+		log.Error("failed to fetch conversations for allocation", zap.Error(err))
 		return nil, err
 	}
 
 	if len(conversations) == 0 {
-		s.logger.Debug("No conversations available for allocation",
-			zap.String("tenant_id", tenantID.String()),
-			zap.String("operator_id", operatorID.String()),
+		log.Debug("no conversations available for allocation",
 			zap.Strings("inbox_ids", uuidSliceToStringSlice(inboxIDs)))
 		return nil, ErrNoConversationsAvailable
 	}
 
 	conv := conversations[0]
+	log.Debug("conversation selected for allocation",
+		zap.String("conversation_id", conv.ID.String()),
+		zap.String("inbox_id", conv.InboxID.String()))
 
 	// 5. Verify conversation is still QUEUED (should always be true with lock)
 	if conv.State != domain.ConversationStateQueued {
-		s.logger.Error("Conversation not in QUEUED state after lock",
+		log.Error("conversation not in QUEUED state after lock",
 			zap.String("conversation_id", conv.ID.String()),
 			zap.String("state", string(conv.State)))
 		return nil, ErrConversationNotQueued
@@ -109,7 +125,7 @@ func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID u
 	conv.UpdatedAt = time.Now().UTC()
 
 	if err := s.repos.ConversationRefs.Update(ctx, conv); err != nil {
-		s.logger.Error("Failed to update conversation for allocation",
+		log.Error("failed to update conversation for allocation",
 			zap.String("conversation_id", conv.ID.String()),
 			zap.Error(err))
 		return nil, err
@@ -117,7 +133,7 @@ func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID u
 
 	// 7. Commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		s.logger.Error("Failed to commit allocation transaction",
+		log.Error("failed to commit allocation transaction",
 			zap.String("conversation_id", conv.ID.String()),
 			zap.Error(err))
 		return nil, err
@@ -125,13 +141,11 @@ func (s *AllocationService) Allocate(ctx context.Context, tenantID, operatorID u
 
 	// 8. Log success
 	priorityScore, _ := conv.PriorityScore.Float64()
-	s.logger.Info("Conversation allocated",
+	log.Info("allocation successful",
 		zap.String("conversation_id", conv.ID.String()),
-		zap.String("operator_id", operatorID.String()),
 		zap.String("inbox_id", conv.InboxID.String()),
-		zap.String("tenant_id", tenantID.String()),
 		zap.Float64("priority_score", priorityScore),
-		zap.Duration("allocation_time", time.Since(start)))
+		zap.Duration("duration", time.Since(start)))
 
 	return conv, nil
 }
