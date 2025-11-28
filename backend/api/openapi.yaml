@@ -134,7 +134,7 @@ paths:
   # ============================================
   # Operator Endpoints
   # ============================================
-  /api/v1/operators/status:
+  /api/v1/operator/status:
     get:
       tags: [Operators]
       summary: Get operator status
@@ -246,14 +246,14 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /api/v1/inboxes/{inbox_id}:
+  /api/v1/inboxes/{id}:
     get:
       tags: [Inboxes]
       summary: Get inbox by ID
       operationId: getInbox
       parameters:
         - $ref: '#/components/parameters/TenantID'
-        - name: inbox_id
+        - name: id
           in: path
           required: true
           schema:
@@ -269,28 +269,103 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  # ============================================
-  # Subscription Endpoints
-  # ============================================
-  /api/v1/subscriptions:
-    post:
-      tags: [Subscriptions]
-      summary: Subscribe to inbox
-      description: Subscribe operator to an inbox
-      operationId: subscribe
+    put:
+      tags: [Inboxes]
+      summary: Update inbox
+      operationId: updateInbox
       parameters:
         - $ref: '#/components/parameters/TenantID'
-        - $ref: '#/components/parameters/OperatorID'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [inbox_id]
               properties:
-                inbox_id:
+                display_name:
+                  type: string
+      responses:
+        '200':
+          description: Inbox updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inbox'
+
+    delete:
+      tags: [Inboxes]
+      summary: Delete inbox
+      operationId: deleteInbox
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Inbox deleted
+
+  # ============================================
+  # Inbox Subscriptions
+  # ============================================
+  /api/v1/inboxes/{inbox_id}/operators:
+    get:
+      tags: [Subscriptions]
+      summary: List operators subscribed to inbox
+      operationId: listOperatorsForInbox
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - name: inbox_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of operators
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operators:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      tags: [Subscriptions]
+      summary: Subscribe operator to inbox
+      description: Subscribe an operator to an inbox
+      operationId: subscribeToInbox
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: inbox_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operator_id]
+              properties:
+                operator_id:
                   type: string
                   format: uuid
       responses:
@@ -303,16 +378,20 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/v1/subscriptions/{inbox_id}:
     delete:
       tags: [Subscriptions]
-      summary: Unsubscribe from inbox
-      operationId: unsubscribe
+      summary: Unsubscribe operator from inbox
+      operationId: unsubscribeFromInbox
       parameters:
         - $ref: '#/components/parameters/TenantID'
-        - $ref: '#/components/parameters/OperatorID'
         - name: inbox_id
           in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: operator_id
+          in: query
           required: true
           schema:
             type: string
@@ -393,7 +472,7 @@ paths:
                   offset:
                     type: integer
 
-  /api/v1/conversations/{conversation_id}:
+  /api/v1/conversations/{id}:
     get:
       tags: [Conversations]
       summary: Get conversation by ID
@@ -401,7 +480,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
-        - name: conversation_id
+        - name: id
           in: path
           required: true
           schema:
@@ -419,16 +498,54 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/search:
+    get:
+      tags: [Conversations]
+      summary: Search conversations
+      description: Search conversations by various criteria
+      operationId: searchConversations
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [QUEUED, ALLOCATED, RESOLVED]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
   # ============================================
   # Allocation Endpoints
   # ============================================
-  /api/v1/allocation/allocate:
+  /api/v1/allocate:
     post:
       tags: [Allocation]
       summary: Auto-allocate conversation
       description: |
         Automatically assigns the highest priority QUEUED conversation
         to the operator. Uses FOR UPDATE SKIP LOCKED for concurrency safety.
+        No request body required.
       operationId: allocate
       parameters:
         - $ref: '#/components/parameters/TenantID'
@@ -450,7 +567,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/allocation/claim/{conversation_id}:
+  /api/v1/claim:
     post:
       tags: [Allocation]
       summary: Manually claim conversation
@@ -462,12 +579,17 @@ paths:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: conversation_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id]
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Conversation claimed
@@ -483,7 +605,7 @@ paths:
   # ============================================
   # Lifecycle Endpoints
   # ============================================
-  /api/v1/lifecycle/resolve/{conversation_id}:
+  /api/v1/resolve:
     post:
       tags: [Lifecycle]
       summary: Resolve conversation
@@ -493,12 +615,17 @@ paths:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: conversation_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id]
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Conversation resolved
@@ -511,7 +638,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/lifecycle/deallocate/{conversation_id}:
+  /api/v1/deallocate:
     post:
       tags: [Lifecycle]
       summary: Deallocate conversation
@@ -521,12 +648,17 @@ paths:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: conversation_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id]
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
       responses:
         '200':
           description: Conversation deallocated
@@ -537,7 +669,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/lifecycle/reassign/{conversation_id}:
+  /api/v1/reassign:
     post:
       tags: [Lifecycle]
       summary: Reassign conversation
@@ -547,20 +679,17 @@ paths:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
         - $ref: '#/components/parameters/IdempotencyKey'
-        - name: conversation_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [target_operator_id]
+              required: [conversation_id, target_operator_id]
               properties:
+                conversation_id:
+                  type: string
+                  format: uuid
                 target_operator_id:
                   type: string
                   format: uuid
@@ -575,6 +704,40 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /api/v1/move_inbox:
+    post:
+      tags: [Lifecycle]
+      summary: Move conversation to different inbox
+      description: Moves a conversation to a different inbox
+      operationId: moveInbox
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id, target_inbox_id]
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
+                target_inbox_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Conversation moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   # ============================================
   # Label Endpoints
@@ -618,22 +781,74 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/labels/{label_id}/conversations/{conversation_id}:
-    post:
+    get:
       tags: [Labels]
-      summary: Add label to conversation
-      operationId: addLabel
+      summary: List labels
+      description: List labels for an inbox
+      operationId: listLabels
       parameters:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - name: label_id
+        - name: inbox_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of labels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  labels:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Label'
+
+  /api/v1/labels/{id}:
+    put:
+      tags: [Labels]
+      summary: Update label
+      operationId: updateLabel
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+        - name: id
           in: path
           required: true
           schema:
             type: string
             format: uuid
-        - name: conversation_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Label updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+    delete:
+      tags: [Labels]
+      summary: Delete label
+      operationId: deleteLabel
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+        - name: id
           in: path
           required: true
           schema:
@@ -641,40 +856,90 @@ paths:
             format: uuid
       responses:
         '204':
-          description: Label added
+          description: Label deleted
+
+  /api/v1/labels/attach:
+    post:
+      tags: [Labels]
+      summary: Add label to conversation
+      operationId: attachLabel
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label_id, conversation_id]
+              properties:
+                label_id:
+                  type: string
+                  format: uuid
+                conversation_id:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: Label attached
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
 
-    delete:
+  /api/v1/labels/detach:
+    post:
       tags: [Labels]
       summary: Remove label from conversation
-      operationId: removeLabel
+      operationId: detachLabel
       parameters:
         - $ref: '#/components/parameters/TenantID'
         - $ref: '#/components/parameters/OperatorID'
-        - name: label_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: conversation_id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label_id, conversation_id]
+              properties:
+                label_id:
+                  type: string
+                  format: uuid
+                conversation_id:
+                  type: string
+                  format: uuid
       responses:
         '204':
-          description: Label removed
+          description: Label detached
         '403':
           $ref: '#/components/responses/Forbidden'
 
   # ============================================
   # Tenant Endpoints
   # ============================================
+  /api/v1/tenant:
+    get:
+      tags: [Tenant]
+      summary: Get tenant configuration
+      description: Returns tenant configuration (ADMIN only)
+      operationId: getTenant
+      parameters:
+        - $ref: '#/components/parameters/TenantID'
+        - $ref: '#/components/parameters/OperatorID'
+      responses:
+        '200':
+          description: Tenant configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/tenant/weights:
     put:
       tags: [Tenant]
