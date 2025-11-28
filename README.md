@@ -11,7 +11,7 @@ This repository contains the **Inbox Allocation Service**, composed of:
 
 The detailed backend documentation (requirements, how to run it locally, environment variables, etc.) is located at:
 
-- `backend/README.md`
+- [`backend/README.md`](./backend/README.md)
 
 Please refer to that file for any technical details about the service.
 
