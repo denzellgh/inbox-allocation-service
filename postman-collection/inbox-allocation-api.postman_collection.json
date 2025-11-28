@@ -1,0 +1,880 @@
+{
+    "info": {
+        "_postman_id": "ias-collection-001",
+        "name": "Inbox Allocation Service",
+        "description": "Complete API collection for testing the Inbox Allocation Service.\n\n## Required Headers\n- `X-Tenant-ID`: UUID of the tenant (required for all /api/v1/* endpoints)\n- `X-Operator-ID`: UUID of the operator (required for most endpoints)\n- `Idempotency-Key`: UUID for mutation endpoints (allocate, claim, resolve, etc.)\n\n## Seed Data Reference\n- **Tenant Acme**: `10000000-0000-0000-0000-000000000001`\n- **Tenant TechStart**: `10000000-0000-0000-0000-000000000002`\n- **Admin Operator**: `30000000-0000-0000-0000-000000000001`\n- **Manager Operator**: `30000000-0000-0000-0000-000000000002`\n- **Regular Operator**: `30000000-0000-0000-0000-000000000004`",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "tenant_acme",
+            "value": "10000000-0000-0000-0000-000000000001",
+            "type": "string"
+        },
+        {
+            "key": "tenant_techstart",
+            "value": "10000000-0000-0000-0000-000000000002",
+            "type": "string"
+        },
+        {
+            "key": "admin_operator",
+            "value": "30000000-0000-0000-0000-000000000001",
+            "type": "string"
+        },
+        {
+            "key": "manager_operator",
+            "value": "30000000-0000-0000-0000-000000000002",
+            "type": "string"
+        },
+        {
+            "key": "regular_operator",
+            "value": "30000000-0000-0000-0000-000000000004",
+            "type": "string"
+        },
+        {
+            "key": "inbox_sales",
+            "value": "20000000-0000-0000-0000-000000000001",
+            "type": "string"
+        },
+        {
+            "key": "inbox_support",
+            "value": "20000000-0000-0000-0000-000000000002",
+            "type": "string"
+        },
+        {
+            "key": "conversation_queued",
+            "value": "70000000-0000-0000-0000-000000000001",
+            "type": "string"
+        },
+        {
+            "key": "conversation_allocated",
+            "value": "70000000-0000-0000-0000-000000000005",
+            "type": "string"
+        },
+        {
+            "key": "label_id",
+            "value": "60000000-0000-0000-0000-000000000001",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health & System",
+            "description": "System health and status endpoints. No authentication required.",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": ["{{base_url}}"],
+                            "path": ["health"]
+                        },
+                        "description": "Liveness probe. Returns database connectivity status."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Ready Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/ready",
+                            "host": ["{{base_url}}"],
+                            "path": ["ready"]
+                        },
+                        "description": "Readiness probe. Returns if the service is ready to accept requests."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Version Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/version",
+                            "host": ["{{base_url}}"],
+                            "path": ["version"]
+                        },
+                        "description": "Returns version, build time, Go version, OS and architecture."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "OpenAPI Spec",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/openapi.yaml",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "openapi.yaml"]
+                        },
+                        "description": "Returns the OpenAPI specification in YAML format."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Operator Status",
+            "description": "Manage current operator's availability status.",
+            "item": [
+                {
+                    "name": "Get My Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operator/status",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operator", "status"]
+                        },
+                        "description": "Get the current operator's status (AVAILABLE, OFFLINE, BUSY, etc.)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update My Status - Set AVAILABLE",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"AVAILABLE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operator/status",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operator", "status"]
+                        },
+                        "description": "Update operator status. Valid values: AVAILABLE, OFFLINE, BUSY, BREAK, TRAINING."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update My Status - Set OFFLINE",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"OFFLINE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operator/status",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operator", "status"]
+                        },
+                        "description": "Set operator to OFFLINE. This may trigger grace period for assigned conversations."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Inboxes",
+            "description": "Inbox CRUD operations. Create/Update/Delete require MANAGER or ADMIN role.",
+            "item": [
+                {
+                    "name": "List Inboxes (Any Operator)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes"]
+                        },
+                        "description": "List inboxes the operator is subscribed to. Without X-Operator-ID returns all tenant inboxes."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Inbox by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}"]
+                        },
+                        "description": "Get inbox details by ID. Requires MANAGER role."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Inbox",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone_number\": \"+14155559999\",\n    \"display_name\": \"Test Inbox\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes"]
+                        },
+                        "description": "Create a new inbox. Requires MANAGER role.\n\n**Required fields:**\n- `phone_number`: Unique phone number (E.164 format)\n- `display_name`: Human-readable name"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Inbox",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone_number\": \"+14155551234\",\n    \"display_name\": \"Updated Inbox Name\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}"]
+                        },
+                        "description": "Update inbox details. Requires MANAGER role."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Inbox",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}"]
+                        },
+                        "description": "Delete an inbox. Requires MANAGER role. ⚠️ Destructive operation."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Inbox Subscriptions",
+            "description": "Manage which operators are subscribed to which inboxes. Requires MANAGER role.",
+            "item": [
+                {
+                    "name": "List Operators in Inbox",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}/operators",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}", "operators"]
+                        },
+                        "description": "List all operators subscribed to an inbox."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Subscribe Operator to Inbox",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"operator_id\": \"30000000-0000-0000-0000-000000000006\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}/operators",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}", "operators"]
+                        },
+                        "description": "Subscribe an operator to an inbox.\n\n**Required fields:**\n- `operator_id`: UUID of the operator to subscribe"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Unsubscribe Operator from Inbox",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/inboxes/{{inbox_sales}}/operators/30000000-0000-0000-0000-000000000006",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "inboxes", "{{inbox_sales}}", "operators", "30000000-0000-0000-0000-000000000006"]
+                        },
+                        "description": "Remove an operator from an inbox."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Operators (Admin)",
+            "description": "Operator CRUD operations. Requires ADMIN role.",
+            "item": [
+                {
+                    "name": "List All Operators",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators"]
+                        },
+                        "description": "List all operators in the tenant."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Operator by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators/{{regular_operator}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators", "{{regular_operator}}"]
+                        },
+                        "description": "Get operator details by ID."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Operator",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"role\": \"OPERATOR\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators"]
+                        },
+                        "description": "Create a new operator.\n\n**Required fields:**\n- `role`: ADMIN, MANAGER, or OPERATOR"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Operator Role",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"role\": \"MANAGER\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators/{{regular_operator}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators", "{{regular_operator}}"]
+                        },
+                        "description": "Update an operator's role."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Operator",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators/{{regular_operator}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators", "{{regular_operator}}"]
+                        },
+                        "description": "Delete an operator. ⚠️ Destructive operation."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Operator's Inboxes",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/operators/{{regular_operator}}/inboxes",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "operators", "{{regular_operator}}", "inboxes"]
+                        },
+                        "description": "List all inboxes an operator is subscribed to."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Tenant Configuration (Admin)",
+            "description": "Tenant-level settings. Requires ADMIN role.",
+            "item": [
+                {
+                    "name": "Get Tenant Config",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tenant",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "tenant"]
+                        },
+                        "description": "Get tenant configuration including priority weights."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Priority Weights",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{admin_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"weight_message_count\": 0.4,\n    \"weight_wait_time\": 0.6\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/tenant/weights",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "tenant", "weights"]
+                        },
+                        "description": "Update priority score weights for auto-allocation.\n\nFormula: `priority = (α * normalized_message_count) + (β * normalized_delay)`\n\n**Required fields:**\n- `weight_message_count`: Weight for message count (α)\n- `weight_wait_time`: Weight for wait time (β)"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Conversations",
+            "description": "Browse and search conversations.",
+            "item": [
+                {
+                    "name": "List Conversations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/conversations",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "conversations"]
+                        },
+                        "description": "List conversations accessible to the operator."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "List Conversations (with filters)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/conversations?state=QUEUED&inbox_id={{inbox_sales}}&per_page=10",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "conversations"],
+                            "query": [
+                                {"key": "state", "value": "QUEUED", "description": "Filter by state: QUEUED, ALLOCATED, RESOLVED"},
+                                {"key": "inbox_id", "value": "{{inbox_sales}}", "description": "Filter by inbox UUID"},
+                                {"key": "per_page", "value": "10", "description": "Number of results per page"}
+                            ]
+                        },
+                        "description": "List conversations with optional filters.\n\n**Query parameters:**\n- `state`: QUEUED, ALLOCATED, RESOLVED\n- `inbox_id`: Filter by inbox UUID\n- `operator_id`: Filter by assigned operator\n- `label_id`: Filter by label\n- `per_page`: Results per page (default 20)\n- `cursor`: Pagination cursor\n- `sort`: priority_desc, created_asc, etc."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Conversation by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/conversations/{{conversation_queued}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "conversations", "{{conversation_queued}}"]
+                        },
+                        "description": "Get conversation details including labels."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Search by Phone Number",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/search?phone=+14155551001",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "search"],
+                            "query": [
+                                {"key": "phone", "value": "+14155551001", "description": "Phone number to search (partial match supported)"}
+                            ]
+                        },
+                        "description": "Search conversations by customer phone number.\n\n**Required query parameter:**\n- `phone`: Phone number (supports partial match)"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Allocation",
+            "description": "Core allocation and claim operations. These endpoints support idempotency via `Idempotency-Key` header.",
+            "item": [
+                {
+                    "name": "Auto-Allocate Next Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/allocate",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "allocate"]
+                        },
+                        "description": "Automatically allocate the highest-priority QUEUED conversation to the operator.\n\n**Requirements:**\n- Operator must be AVAILABLE\n- Operator must have at least one inbox subscription\n- There must be QUEUED conversations in subscribed inboxes\n\n**Uses `SELECT ... FOR UPDATE SKIP LOCKED` to prevent race conditions.**"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Claim Specific Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/claim",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "claim"]
+                        },
+                        "description": "Claim a specific QUEUED conversation.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation to claim\n\n**Requirements:**\n- Operator must be AVAILABLE\n- Operator must be subscribed to the conversation's inbox\n- Conversation must be in QUEUED state"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Lifecycle",
+            "description": "Conversation lifecycle operations (resolve, deallocate, reassign, move). Support idempotency.",
+            "item": [
+                {
+                    "name": "Resolve Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000005\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/resolve",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "resolve"]
+                        },
+                        "description": "Mark a conversation as RESOLVED.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n\n**Requirements:**\n- Conversation must be in ALLOCATED state\n- Operator must own the conversation OR be a MANAGER/ADMIN"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Deallocate Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000005\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/deallocate",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "deallocate"]
+                        },
+                        "description": "Return a conversation to QUEUED state.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n\n**Requirements:**\n- Conversation must be in ALLOCATED state"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Reassign to Another Operator",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000005\",\n    \"operator_id\": \"30000000-0000-0000-0000-000000000005\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/reassign",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "reassign"]
+                        },
+                        "description": "Reassign a conversation to a different operator.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n- `operator_id`: UUID of the target operator\n\n**Requirements:**\n- Conversation must be in ALLOCATED state\n- Target operator must be subscribed to the inbox\n- Requires MANAGER or ADMIN role (or own the conversation)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Move to Different Inbox",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{manager_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"},
+                            {"key": "Idempotency-Key", "value": "{{$guid}}", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000005\",\n    \"inbox_id\": \"20000000-0000-0000-0000-000000000002\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/move_inbox",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "move_inbox"]
+                        },
+                        "description": "Move a conversation to a different inbox (escalation, transfer).\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n- `inbox_id`: UUID of the target inbox\n\n**Notes:**\n- Conversation will be deallocated and moved to QUEUED in new inbox\n- Labels will be removed (as they are inbox-specific)"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Labels",
+            "description": "Label management and conversation tagging.",
+            "item": [
+                {
+                    "name": "List Labels for Inbox",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels?inbox_id={{inbox_sales}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels"],
+                            "query": [
+                                {"key": "inbox_id", "value": "{{inbox_sales}}", "description": "Required: Inbox UUID"}
+                            ]
+                        },
+                        "description": "List all labels for an inbox.\n\n**Required query parameter:**\n- `inbox_id`: UUID of the inbox"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Create Label",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"inbox_id\": \"20000000-0000-0000-0000-000000000001\",\n    \"name\": \"Follow-up Required\",\n    \"color\": \"#FF5733\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels"]
+                        },
+                        "description": "Create a new label for an inbox.\n\n**Required fields:**\n- `inbox_id`: UUID of the inbox\n- `name`: Label name (unique per inbox)\n- `color`: Hex color code (e.g., #FF5733)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Label",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Label Name\",\n    \"color\": \"#2ECC71\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels/{{label_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels", "{{label_id}}"]
+                        },
+                        "description": "Update a label's name or color."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Label",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"}
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels/{{label_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels", "{{label_id}}"]
+                        },
+                        "description": "Delete a label. Will also remove from all conversations."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Attach Label to Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000001\",\n    \"label_id\": \"60000000-0000-0000-0000-000000000001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels/attach",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels", "attach"]
+                        },
+                        "description": "Attach a label to a conversation.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n- `label_id`: UUID of the label\n\n**Note:** Label must belong to the same inbox as the conversation."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Detach Label from Conversation",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {"key": "X-Tenant-ID", "value": "{{tenant_acme}}", "type": "text"},
+                            {"key": "X-Operator-ID", "value": "{{regular_operator}}", "type": "text"},
+                            {"key": "Content-Type", "value": "application/json", "type": "text"}
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"conversation_id\": \"70000000-0000-0000-0000-000000000001\",\n    \"label_id\": \"60000000-0000-0000-0000-000000000001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/labels/detach",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "labels", "detach"]
+                        },
+                        "description": "Remove a label from a conversation.\n\n**Required fields:**\n- `conversation_id`: UUID of the conversation\n- `label_id`: UUID of the label"
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

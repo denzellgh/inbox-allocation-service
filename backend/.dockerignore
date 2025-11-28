@@ -1,0 +1,86 @@
+# ============================================
+# Docker Build Context Exclusions
+# ============================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE and Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+coverage
+coverage.out
+coverage.html
+*.test
+*.prof
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+
+# Documentation (keep api/ for OpenAPI)
+docs/
+*.md
+!README.md
+
+# Local configuration
+.env
+.env.local
+.env.*.local
+*.local.yaml
+
+# Docker files (prevent recursive copy)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Infrastructure
+infra/
+terraform/
+*.tf
+*.tfstate
+*.tfvars
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+
+# Development tools
+.air.toml
+.golangci.yml
+.pre-commit-config.yaml
+
+# Kubernetes (if separate)
+k8s/
+kubernetes/
+helm/
+
+# Vendor (if using modules)
+# vendor/
+
+# Scripts (keep init-db.sh)
+scripts/
+!scripts/init-db.sh

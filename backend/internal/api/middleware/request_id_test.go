@@ -10,7 +10,7 @@ import (
 
 func TestRequestID_GeneratesID(t *testing.T) {
 	handler := middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := middleware.GetRequestID(r.Context())
+		id := middleware.GetRequestID(r)
 		if id == "" {
 			t.Error("Expected request ID in context")
 		}
@@ -28,7 +28,7 @@ func TestRequestID_GeneratesID(t *testing.T) {
 func TestRequestID_UsesProvidedID(t *testing.T) {
 	providedID := "custom-request-id-123"
 	handler := middleware.RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := middleware.GetRequestID(r.Context())
+		id := middleware.GetRequestID(r)
 		if id != providedID {
 			t.Errorf("Expected %s, got %s", providedID, id)
 		}
@@ -38,4 +38,8 @@ func TestRequestID_UsesProvidedID(t *testing.T) {
 	req.Header.Set("X-Request-ID", providedID)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
+
+	if rr.Header().Get("X-Request-ID") != providedID {
+		t.Errorf("Expected response header %s, got %s", providedID, rr.Header().Get("X-Request-ID"))
+	}
 }

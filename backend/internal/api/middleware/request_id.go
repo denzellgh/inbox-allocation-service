@@ -1,43 +1,45 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 )
-
-// ContextKey type for context keys
-type ContextKey string
 
 const (
-	// RequestIDKey is the context key for request ID
-	RequestIDKey ContextKey = "request_id"
-	// RequestIDHeader is the HTTP header for request ID
-	RequestIDHeader = "X-Request-ID"
+	// HeaderXRequestID is the header name for request ID
+	HeaderXRequestID = "X-Request-ID"
+	// HeaderXCorrelationID is the header name for correlation ID
+	HeaderXCorrelationID = "X-Correlation-ID"
 )
 
-// RequestID middleware generates or extracts request ID
+// RequestID middleware generates or extracts request/correlation IDs
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestID := r.Header.Get(RequestIDHeader)
-		if requestID == "" {
-			requestID = uuid.New().String()
+		// Try to get existing correlation ID from headers
+		correlationID := r.Header.Get(HeaderXCorrelationID)
+		if correlationID == "" {
+			correlationID = r.Header.Get(HeaderXRequestID)
 		}
 
-		// Set in response header
-		w.Header().Set(RequestIDHeader, requestID)
+		// Generate new ID if not provided (using UUIDv7 for time-ordering)
+		if correlationID == "" {
+			correlationID = uuid.Must(uuid.NewV7()).String()
+		}
 
 		// Add to context
-		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
+		ctx := logger.WithCorrelationIDCtx(r.Context(), correlationID)
+
+		// Add to response headers
+		w.Header().Set(HeaderXRequestID, correlationID)
+		w.Header().Set(HeaderXCorrelationID, correlationID)
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-// GetRequestID extracts request ID from context
-func GetRequestID(ctx context.Context) string {
-	if id, ok := ctx.Value(RequestIDKey).(string); ok {
-		return id
-	}
-	return ""
+// GetRequestID extracts request ID from request context
+func GetRequestID(r *http.Request) string {
+	return logger.GetCorrelationID(r.Context())
 }
