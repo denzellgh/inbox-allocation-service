@@ -5,16 +5,17 @@ import (
 	"runtime/debug"
 
 	"github.com/inbox-allocation-service/internal/api/response"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"go.uber.org/zap"
 )
 
 // Recovery middleware recovers from panics and logs the error
-func Recovery(log *zap.Logger) func(http.Handler) http.Handler {
+func Recovery(log *logger.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if err := recover(); err != nil {
-					requestID := GetRequestID(r.Context())
+					requestID := logger.GetCorrelationID(r.Context())
 					stack := debug.Stack()
 
 					log.Error("Panic recovered",

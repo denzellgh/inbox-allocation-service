@@ -213,6 +213,25 @@ type GracePeriodAssignment struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+// Stores idempotency keys with cached responses for deduplication
+type IdempotencyKey struct {
+	ID pgtype.UUID `json:"id"`
+	// Client-provided idempotency key (UUID recommended)
+	Key      string      `json:"key"`
+	TenantID pgtype.UUID `json:"tenant_id"`
+	Endpoint string      `json:"endpoint"`
+	Method   string      `json:"method"`
+	// SHA256 hash of request body for validation (optional)
+	RequestHash pgtype.Text `json:"request_hash"`
+	// HTTP status code of the original response
+	ResponseStatus int32 `json:"response_status"`
+	// Full JSON response body
+	ResponseBody []byte             `json:"response_body"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	// When this record can be cleaned up
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
 type Inbox struct {
 	ID          pgtype.UUID        `json:"id"`
 	TenantID    pgtype.UUID        `json:"tenant_id"`
