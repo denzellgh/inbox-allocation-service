@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 
@@ -15,9 +16,28 @@ import (
 // ==================== Error Mapping ====================
 
 func mapError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Handle PostgreSQL specific errors
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "55P03": // lock_not_available (NOWAIT failed)
+			return domain.ErrConversationLocked
+		case "40P01": // deadlock_detected
+			return domain.ErrLockTimeout
+		case "23505": // unique_violation
+			return domain.ErrAlreadyExists
+		}
+	}
+
+	// Handle pgx errors
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ErrNotFound
 	}
+
 	return err
 }
 

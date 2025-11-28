@@ -5,17 +5,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 type SubscriptionService struct {
 	repos  *repository.RepositoryContainer
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
-func NewSubscriptionService(repos *repository.RepositoryContainer, logger *zap.Logger) *SubscriptionService {
-	return &SubscriptionService{repos: repos, logger: logger}
+func NewSubscriptionService(repos *repository.RepositoryContainer, log *logger.Logger) *SubscriptionService {
+	return &SubscriptionService{repos: repos, logger: log}
 }
 
 func (s *SubscriptionService) Subscribe(ctx context.Context, operatorID, inboxID uuid.UUID) (*domain.OperatorInboxSubscription, error) {

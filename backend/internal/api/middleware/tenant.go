@@ -6,13 +6,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/api/response"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 )
 
 const (
 	// TenantIDKey is the context key for tenant ID
-	TenantIDKey ContextKey = "tenant_id"
+	TenantIDKey = logger.TenantIDKey
 	// OperatorIDKey is the context key for operator ID
-	OperatorIDKey ContextKey = "operator_id"
+	OperatorIDKey = logger.OperatorIDKey
 
 	// Header names
 	TenantIDHeader   = "X-Tenant-ID"

@@ -1,0 +1,104 @@
+# ============================================
+# Inbox Allocation Service - Production
+# ============================================
+version: '3.8'
+
+services:
+  # ============================================
+  # Application (Scalable)
+  # ============================================
+  app:
+    image: ${DOCKER_REGISTRY:-ghcr.io/your-org}/inbox-allocation-service:${VERSION:-latest}
+    deploy:
+      replicas: ${REPLICAS:-2}
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+    environment:
+      # Server
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - SERVER_READ_TIMEOUT=${SERVER_READ_TIMEOUT:-15s}
+      - SERVER_WRITE_TIMEOUT=${SERVER_WRITE_TIMEOUT:-15s}
+      - SERVER_SHUTDOWN_TIMEOUT=${SERVER_SHUTDOWN_TIMEOUT:-30s}
+      # Database (external)
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSL_MODE=${DB_SSL_MODE:-require}
+      - DB_MAX_CONNS=${DB_MAX_CONNS:-25}
+      - DB_MIN_CONNS=${DB_MIN_CONNS:-5}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=json
+      # Workers
+      - GRACE_PERIOD_DURATION=${GRACE_PERIOD_DURATION:-5m}
+      - GRACE_PERIOD_CHECK_INTERVAL=${GRACE_PERIOD_CHECK_INTERVAL:-30s}
+      - GRACE_PERIOD_BATCH_SIZE=${GRACE_PERIOD_BATCH_SIZE:-50}
+      # Idempotency
+      - IDEMPOTENCY_TTL=${IDEMPOTENCY_TTL:-24h}
+      - IDEMPOTENCY_CLEANUP_INTERVAL=${IDEMPOTENCY_CLEANUP_INTERVAL:-1h}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        tag: "{{.Name}}/{{.ID}}"
+    networks:
+      - allocation_network
+
+  # ============================================
+  # Migrations (one-shot, run manually)
+  # ============================================
+  migrate:
+    image: migrate/migrate:latest
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSL_MODE=${DB_SSL_MODE:-require}
+    volumes:
+      - ./migrations:/migrations:ro
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSL_MODE:-require}",
+      "up"
+    ]
+    networks:
+      - allocation_network
+    profiles:
+      - migrate
+
+networks:
+  allocation_network:
+    external: true
+    name: ${NETWORK_NAME:-allocation_network}

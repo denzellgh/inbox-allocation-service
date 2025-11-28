@@ -26,4 +26,6 @@ var (
 	// Concurrency errors
 	ErrConcurrentModification = errors.New("concurrent modification detected")
 	ErrLockAcquisitionFailed  = errors.New("failed to acquire lock")
+	ErrLockTimeout            = errors.New("lock acquisition timeout")
+	ErrConversationLocked     = errors.New("conversation is locked by another transaction")
 )

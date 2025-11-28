@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/inbox-allocation-service/internal/config"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
+	"github.com/inbox-allocation-service/internal/pkg/retry"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
 
 // NewPool creates a new PostgreSQL connection pool
@@ -42,6 +45,50 @@ func NewPool(cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pool: %w", err)
 	}
+
+	return pool, nil
+}
+
+// NewPoolWithRetry creates a pool with connection retry
+func NewPoolWithRetry(cfg *config.DatabaseConfig, log *logger.Logger) (*pgxpool.Pool, error) {
+	retryCfg := retry.Config{
+		MaxAttempts:    5,
+		InitialBackoff: 1 * time.Second,
+		MaxBackoff:     30 * time.Second,
+		BackoffFactor:  2.0,
+		Jitter:         0.1,
+		OnRetry: func(attempt int, err error, nextBackoff time.Duration) {
+			log.Warn("database connection attempt failed",
+				zap.Int("attempt", attempt),
+				zap.Error(err),
+				zap.Duration("next_retry_in", nextBackoff),
+			)
+		},
+	}
+
+	pool, err := retry.DoWithResult(context.Background(), retryCfg, func() (*pgxpool.Pool, error) {
+		pool, err := NewPool(cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		// Verify connection works
+		if err := HealthCheck(context.Background(), pool); err != nil {
+			pool.Close()
+			return nil, err
+		}
+
+		return pool, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect after retries: %w", err)
+	}
+
+	log.Info("database connection established",
+		zap.String("host", cfg.Host),
+		zap.String("database", cfg.DBName),
+	)
 
 	return pool, nil
 }

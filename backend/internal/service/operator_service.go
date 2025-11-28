@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
 	"github.com/inbox-allocation-service/internal/pkg/database"
+	"github.com/inbox-allocation-service/internal/pkg/logger"
 	"github.com/inbox-allocation-service/internal/repository"
 	"go.uber.org/zap"
 )
@@ -16,15 +17,15 @@ const GracePeriodDuration = 5 * time.Minute
 type OperatorService struct {
 	repos  *repository.RepositoryContainer
 	txMgr  *database.TxManager
-	logger *zap.Logger
+	logger *logger.Logger
 }
 
 func NewOperatorService(
 	repos *repository.RepositoryContainer,
 	txMgr *database.TxManager,
-	logger *zap.Logger,
+	log *logger.Logger,
 ) *OperatorService {
-	return &OperatorService{repos: repos, txMgr: txMgr, logger: logger}
+	return &OperatorService{repos: repos, txMgr: txMgr, logger: log}
 }
 
 // ==================== Status Management ====================

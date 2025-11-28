@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/inbox-allocation-service/internal/domain"
@@ -200,4 +201,118 @@ func (r *ConversationRefRepositoryImpl) toDomainSlice(rows []ConversationRef) []
 		conversations[i] = r.toDomain(row)
 	}
 	return conversations
+}
+
+// ListWithFilters returns conversations matching the given filters with cursor pagination
+func (r *ConversationRefRepositoryImpl) ListWithFilters(ctx context.Context, filters ConversationFilters) ([]*domain.ConversationRef, error) {
+	// Build dynamic query
+	query := `
+		SELECT 
+			id, tenant_id, inbox_id, external_conversation_id,
+			customer_phone_number, state, assigned_operator_id,
+			last_message_at, message_count, priority_score,
+			created_at, updated_at, resolved_at
+		FROM conversation_refs
+		WHERE tenant_id = $1
+	`
+	args := []interface{}{filters.TenantID}
+	argIndex := 2
+
+	// State filter
+	if filters.State != nil {
+		query += fmt.Sprintf(` AND state = $%d`, argIndex)
+		args = append(args, string(*filters.State))
+		argIndex++
+	}
+
+	// Inbox filter
+	if filters.InboxID != nil {
+		query += fmt.Sprintf(` AND inbox_id = $%d`, argIndex)
+		args = append(args, *filters.InboxID)
+		argIndex++
+	}
+
+	// Operator filter
+	if filters.OperatorID != nil {
+		query += fmt.Sprintf(` AND assigned_operator_id = $%d`, argIndex)
+		args = append(args, *filters.OperatorID)
+		argIndex++
+	}
+
+	// Allowed inboxes filter (for operators)
+	if len(filters.AllowedInboxIDs) > 0 {
+		query += fmt.Sprintf(` AND inbox_id = ANY($%d)`, argIndex)
+		args = append(args, filters.AllowedInboxIDs)
+		argIndex++
+	}
+
+	// Label filter (join)
+	if filters.LabelID != nil {
+		query += fmt.Sprintf(` AND EXISTS (SELECT 1 FROM conversation_labels cl WHERE cl.conversation_id = id AND cl.label_id = $%d)`, argIndex)
+		args = append(args, *filters.LabelID)
+		argIndex++
+	}
+
+	// Cursor pagination
+	if filters.HasCursor() {
+		switch filters.SortOrder {
+		case "oldest":
+			query += fmt.Sprintf(` AND (last_message_at, id) > ($%d, $%d)`, argIndex, argIndex+1)
+		case "priority":
+			query += fmt.Sprintf(` AND (priority_score, last_message_at, id) < ($%d, $%d, $%d)`, argIndex, argIndex+1, argIndex+2)
+		default: // newest
+			query += fmt.Sprintf(` AND (last_message_at, id) < ($%d, $%d)`, argIndex, argIndex+1)
+		}
+		args = append(args, *filters.CursorTimestamp, *filters.CursorID)
+		argIndex += 2
+	}
+
+	// Sorting
+	switch filters.SortOrder {
+	case "oldest":
+		query += ` ORDER BY last_message_at ASC, id ASC`
+	case "priority":
+		query += ` ORDER BY priority_score DESC, last_message_at DESC, id DESC`
+	default: // newest
+		query += ` ORDER BY last_message_at DESC, id DESC`
+	}
+
+	// Limit
+	query += fmt.Sprintf(` LIMIT $%d`, argIndex)
+	args = append(args, filters.GetLimit())
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	defer rows.Close()
+
+	var conversations []*domain.ConversationRef
+	for rows.Next() {
+		var row ConversationRef
+		err := rows.Scan(
+			&row.ID, &row.TenantID, &row.InboxID, &row.ExternalConversationID,
+			&row.CustomerPhoneNumber, &row.State, &row.AssignedOperatorID,
+			&row.LastMessageAt, &row.MessageCount, &row.PriorityScore,
+			&row.CreatedAt, &row.UpdatedAt, &row.ResolvedAt,
+		)
+		if err != nil {
+			return nil, mapError(err)
+		}
+		conversations = append(conversations, r.toDomain(row))
+	}
+
+	return conversations, nil
+}
+
+// GetByPhone returns conversations by customer phone number
+func (r *ConversationRefRepositoryImpl) GetByPhone(ctx context.Context, tenantID uuid.UUID, phone string) ([]*domain.ConversationRef, error) {
+	rows, err := r.q.SearchConversationsByPhone(ctx, SearchConversationsByPhoneParams{
+		TenantID:            uuidToPgtype(tenantID),
+		CustomerPhoneNumber: phone,
+	})
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return r.toDomainSlice(rows), nil
 }

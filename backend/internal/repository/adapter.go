@@ -18,6 +18,7 @@ type RepositoryContainer struct {
 	Labels                 *LabelRepositoryImpl
 	ConversationLabels     *ConversationLabelRepositoryImpl
 	GracePeriodAssignments *GracePeriodRepositoryImpl
+	Idempotency            *IdempotencyRepositoryImpl
 }
 
 // NewRepositoryContainer creates all repository instances
@@ -36,6 +37,7 @@ func NewRepositoryContainer(pool *pgxpool.Pool) *RepositoryContainer {
 		Labels:                 NewLabelRepository(queries),
 		ConversationLabels:     NewConversationLabelRepository(queries),
 		GracePeriodAssignments: NewGracePeriodRepository(queries, pool),
+		Idempotency:            NewIdempotencyRepository(queries),
 	}
 }
 
