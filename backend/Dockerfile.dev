@@ -1,0 +1,23 @@
+ARG GO_VERSION=1.25.2
+
+FROM golang:${GO_VERSION}-alpine
+
+# Install dev dependencies
+RUN apk add --no-cache \
+    git \
+    ca-certificates \
+    tzdata \
+    bash
+
+WORKDIR /app
+
+# Preload Go modules for faster builds
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source code (used when not bind-mounting in development)
+COPY . .
+
+EXPOSE 8080
+
+CMD ["go", "run", "./cmd/server/main.go"]
