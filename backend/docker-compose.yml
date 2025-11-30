@@ -1,8 +1,6 @@
 # ============================================
 # Inbox Allocation Service - Development
 # ============================================
-version: '3.8'
-
 services:
   # ============================================
   # PostgreSQL Database
@@ -49,31 +47,61 @@ services:
     networks:
       - allocation_network
 
+
+  # ============================================
+  # Application
+  # ============================================
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    container_name: allocation_app_prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    networks:
+      - allocation_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles:
+      - prod
+
   # ============================================
   # Development with Hot Reload (optional)
   # ============================================
   app-dev:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
+      dockerfile: Dockerfile.dev
+      #target: development
     container_name: allocation_app_dev
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    env_file:
+      - .env
     environment:
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8080
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-allocation_user}
-      - DB_PASSWORD=${DB_PASSWORD:-allocation_pass}
-      - DB_NAME=${DB_NAME:-allocation_db}
-      - DB_SSL_MODE=disable
-      - LOG_LEVEL=debug
-      - LOG_FORMAT=console
+      DB_HOST: postgres
+      DB_PORT: 5432
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
@@ -81,6 +109,8 @@ services:
       - go_modules:/go/pkg/mod
     networks:
       - allocation_network
+    profiles:
+      - dev
 
 volumes:
   postgres_data:
