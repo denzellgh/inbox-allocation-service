@@ -140,13 +140,18 @@ docker-build: ## Build Docker image
 .PHONY: docker-build-dev
 docker-build-dev: ## Build development Docker image
 	docker build \
+		-f Dockerfile.dev  \
 		--target development \
 		-t inbox-allocation-service:dev \
 		.
 
+.PHONY: docker-run
+docker-run: ## Run with Docker Compose (full stack)
+	docker-compose --profile prod up -d
+
 .PHONY: docker-run-dev
 docker-run-dev: ## Run development stack with hot reload
-	docker-compose up -d
+	docker-compose --profile dev up -d
 
 .PHONY: docker-stop
 docker-stop: ## Stop Docker Compose
