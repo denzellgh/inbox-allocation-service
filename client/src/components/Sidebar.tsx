@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { LayoutDashboard, Inbox, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Settings, Tag } from "lucide-react";
 import clsx from "clsx";
 
 export default function Sidebar() {
@@ -10,6 +10,7 @@ export default function Sidebar() {
   const navItems = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/inbox", label: "My Inbox", icon: Inbox },
+    { to: "/labels", label: "Labels", icon: Tag },
     // Admin/Manager only
     ...(isAdminOrManager
       ? [
